@@ -413,7 +413,7 @@ static void UI_RemoveServerFromDisplayList(int num)
 UI_InsertServerIntoDisplayList
 ==================
 */
-static void UI_InsertServerIntoDisplayList(int num, int position)
+static qboolean UI_InsertServerIntoDisplayList(int num, int position)
 {
     int i;
     static char info[MAX_STRING_CHARS];
