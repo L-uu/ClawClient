@@ -93,6 +93,8 @@ vmCvar_t ui_emoticons;
 vmCvar_t ui_winner;
 vmCvar_t ui_chatCommands;
 
+vmCvar_t ui_hideLegacyProtocols;
+
 static cvarTable_t cvarTable[] = {{&ui_browserShowFull, "ui_browserShowFull", "1", CVAR_ARCHIVE},
     {&ui_browserShowEmpty, "ui_browserShowEmpty", "1", CVAR_ARCHIVE},
 
@@ -112,7 +114,8 @@ static cvarTable_t cvarTable[] = {{&ui_browserShowFull, "ui_browserShowFull", "1
     {&ui_textWrapCache, "ui_textWrapCache", "1", CVAR_ARCHIVE},
     {&ui_developer, "ui_developer", "0", CVAR_ARCHIVE | CVAR_CHEAT},
     {&ui_emoticons, "cg_emoticons", "1", CVAR_LATCH | CVAR_ARCHIVE}, {&ui_winner, "ui_winner", "", CVAR_ROM},
-    {&ui_chatCommands, "ui_chatCommands", "1", CVAR_ARCHIVE}};
+    {&ui_chatCommands, "ui_chatCommands", "1", CVAR_ARCHIVE},
+    {&ui_hideLegacyProtocols, "ui_hideLegacyProtocols", "1", CVAR_ARCHIVE}};
 
 static size_t cvarTableSize = ARRAY_LEN(cvarTable);
 
@@ -413,25 +416,141 @@ static void UI_RemoveServerFromDisplayList(int num)
 UI_InsertServerIntoDisplayList
 ==================
 */
+
 static qboolean UI_InsertServerIntoDisplayList(int num, int position)
 {
-    int i;
-    static char info[MAX_STRING_CHARS];
+	int i;
+	int hostnameLen;
+	int protocol;
+	int port;
+	char adrstr[MAX_ADDRESSLENGTH];
+	char hostname[MAX_HOSTNAME_LENGTH];
+	char basehostname[MAX_HOSTNAME_LENGTH];
+	static char info[MAX_STRING_CHARS];
 
-    if (position < 0 || position > uiInfo.serverStatus.numDisplayServers)
-        return;
+	if (position < 0 || position > uiInfo.serverStatus.numDisplayServers)
+		return qfalse;
 
-    trap_LAN_GetServerInfo(ui_netSource.integer, num, info, MAX_STRING_CHARS);
+	trap_LAN_GetServerInfo(ui_netSource.integer, num, info, MAX_STRING_CHARS);
 
-    if (!UI_ServerInfoIsValid(info))  // don't list servers with invalid info
-        return;
+	if (!UI_ServerInfoIsValid(info))  // don't list servers with invalid info
+		return qfalse;
 
-    uiInfo.serverStatus.numDisplayServers++;
+	Q_strncpyz(hostname, Info_ValueForKey(info, "hostname"), MAX_HOSTNAME_LENGTH);
 
-    for (i = uiInfo.serverStatus.numDisplayServers; i > position; i--)
-        uiInfo.serverStatus.displayServers[i] = uiInfo.serverStatus.displayServers[i - 1];
+	hostnameLen = strlen(hostname);
 
-    uiInfo.serverStatus.displayServers[position] = num;
+	trap_LAN_GetServerAddressString(
+		ui_netSource.integer, num, adrstr, MAX_ADDRESSLENGTH);
+
+	protocol = UI_ProtocolFromAddress(adrstr);
+
+	port = UI_PortFromAddress(adrstr);
+
+	if (ui_hideLegacyProtocols.integer) {
+		if (protocol && hostnameLen > 6) {
+			// strip the protocol tags from the hostname
+			hostname[hostnameLen - 6] = '\0';
+		}
+	}
+
+	UI_SanitiseString(hostname, basehostname, sizeof(basehostname));
+
+	// check if this is a duplicate listing of a multiprotocol server
+	for (i = 0; i < uiInfo.serverStatus.numDisplayServers; i++) {
+		int j;
+		int clients;
+		int protocol2;
+		int port2;
+		char info2[MAX_STRING_CHARS];
+		char adrstr2[MAX_ADDRESSLENGTH];
+
+		trap_LAN_GetServerAddressString(
+			ui_netSource.integer,
+			uiInfo.serverStatus.displayServers[i], adrstr2, MAX_ADDRESSLENGTH);
+
+		protocol2 = UI_ProtocolFromAddress(adrstr2);
+
+		port2 = UI_PortFromAddress(adrstr2);
+
+		//compare the addresses
+		if (adrstr[0] != adrstr2[0]) {
+			continue;
+		} else {
+			qboolean skip = qfalse;
+
+			for (j = 1; adrstr[j] && adrstr2[j]; j++) {
+				if(adrstr[j] != adrstr2[j]) {
+					skip = qtrue;
+					break;
+				}
+
+				//don't compare ports
+				if (adrstr[j] == ':') {
+					break;
+				}
+			}
+
+			if (skip) {
+				continue;
+			}
+		}
+
+		trap_LAN_GetServerInfo(
+			ui_netSource.integer,
+			 uiInfo.serverStatus.displayServers[i], info2, MAX_STRING_CHARS);
+
+		// if the ports are not the same, check to see if the host names are the
+		// same for older multiprotocol servers
+		if(port != port2) {
+			int hostnameLen2;
+			char hostname2[MAX_HOSTNAME_LENGTH];
+			char basehostname2[MAX_HOSTNAME_LENGTH];
+
+			Q_strncpyz(hostname2, Info_ValueForKey(info2, "hostname"), MAX_HOSTNAME_LENGTH);
+
+			hostnameLen2 = strlen(hostname2);
+
+			if (protocol2 && hostnameLen2 > 6) {
+				 // strip the protocol tags from the hostname
+				 hostname2[hostnameLen2 - 7] = '\0';
+			}
+
+			UI_SanitiseString(hostname2, basehostname2, sizeof(basehostname2));
+
+			//compare the hostnames
+			if (Q_stricmp(basehostname, basehostname2)) {
+				continue;
+			}
+		}
+
+		uiInfo.serverStatus.numDuplicateMultiprotocolServers++;
+
+		if (ui_hideLegacyProtocols.integer) {
+			//show only the most recent protocol for a given server
+			if (protocol >= protocol2) {
+				clients = atoi(Info_ValueForKey(info, "clients"));
+				uiInfo.serverStatus.numDuplicateMultiprotocolServerClients += clients;
+				return qfalse;
+			} else {
+				clients = atoi(Info_ValueForKey(info2, "clients"));
+				uiInfo.serverStatus.numDuplicateMultiprotocolServerClients += clients;
+				UI_RemoveServerFromDisplayList(uiInfo.serverStatus.displayServers[i]);
+				i--;
+				continue;
+			}
+		}
+	}
+
+	//insert the server
+	uiInfo.serverStatus.numDisplayServers++;
+
+	for (i = uiInfo.serverStatus.numDisplayServers; i > position; i--)
+		uiInfo.serverStatus.displayServers[i] = uiInfo.serverStatus.displayServers[i - 1];
+
+	uiInfo.serverStatus.displayServers[position] = num;
+
+	return qtrue;
 }
 
 /*
