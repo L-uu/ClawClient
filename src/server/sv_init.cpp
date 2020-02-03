@@ -524,6 +524,7 @@ static void SV_ClearServer(void)
     ::memset(&sv, 0, sizeof(sv));
 }
 
+#ifndef NEW_FILESYSTEM
 /*
 ================
 SV_TouchCGame
@@ -543,6 +544,7 @@ static void SV_TouchCGame(void)
         FS_FCloseFile(f);
     }
 }
+#endif
 
 /*
 ================
@@ -558,13 +560,21 @@ void SV_SpawnServer(char *server)
     int i;
     int checksum;
     char systemInfo[16384];
+#ifndef NEW_FILESYSTEM
     const char *p;
+#endif
 
     // shut down the existing game if it is running
     SV_ShutdownGameProgs();
 
     Com_Printf("------ Server Initialization ------\n");
     Com_Printf("Server: %s\n", server);
+
+#ifdef NEW_FILESYSTEM
+	// This is sometimes called in CL_MapLoading->CL_Disconnect, but not in the case
+	// of a previous local game, so do it here to be safe
+	fs_disconnect_cleanup();
+#endif
 
     // if not running a dedicated server CL_MapLoading will connect the client to the server
     // also print some status stuff
@@ -631,7 +641,9 @@ void SV_SpawnServer(char *server)
 
     // get a new checksum feed and restart the file system
     sv.checksumFeed = (((int)rand() << 16) ^ rand()) ^ Com_Milliseconds();
+#ifndef NEW_FILESYSTEM
     FS_Restart(sv.checksumFeed);
+#endif
 
     // advertise GPP-compatible extensions
     Cvar_Set("sv_gppExtension", "1");
@@ -701,6 +713,13 @@ void SV_SpawnServer(char *server)
     sv.time += 100;
     svs.time += 100;
 
+#ifdef NEW_FILESYSTEM
+	// Set sv_referencedPaks and sv_referencedPakNames (download list)
+	fs_set_download_list();
+
+	// Set sv_paks and sv_pakNames (pure list)
+	fs_set_pure_list();
+#else
     if (sv_pure->integer)
     {
         // the server sends these to the clients so they will only
@@ -742,6 +761,7 @@ void SV_SpawnServer(char *server)
     Cvar_Set("sv_referencedPakNames", p);
     p = FS_ReferencedPakNames(true);
     Cvar_Set("sv_referencedAlternatePakNames", p);
+#endif
 
     // save systeminfo and serverinfo strings
     Q_strncpyz(systemInfo, Cvar_InfoString_Big(CVAR_SYSTEMINFO), sizeof(systemInfo));

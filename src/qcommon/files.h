@@ -24,6 +24,9 @@
 extern "C" {
 #endif
 
+#ifdef NEW_FILESYSTEM
+#include "../filesystem/fspublic.h"
+#else
 #include "q_platform.h"
 #include "q_shared.h"
 
@@ -256,6 +259,7 @@ void         FS_HomeRemove (const char* homePath);
 void         FS_Remove (const char* osPath);
 bool         FS_BrowseHomepath ( void );
 bool         FS_OpenBaseGamePath( const char *baseGamePath );
+bool         FS_OpenModPath( const char *modPath );
 bool     FS_CreatePath (const char* OSPath);
 char*        FS_BuildOSPath (const char* base, const char* game, const char* qpath);
 long         FS_filelength (fileHandle_t f);
@@ -278,6 +282,7 @@ extern FILE *missingFiles;
 
 extern char lastValidGame[MAX_OSPATH];
 extern char lastValidBase[MAX_OSPATH];
+#endif
 
 #ifdef __cplusplus
 }

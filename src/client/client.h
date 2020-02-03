@@ -276,6 +276,9 @@ struct clientConnection_t {
     bool cURLEnabled;
     bool cURLUsed;
     bool cURLDisconnected;
+#ifdef NEW_FILESYSTEM
+	bool cURLReconnecting;
+#endif
 
     char downloadURL[MAX_OSPATH];
     CURL *downloadCURL;
@@ -288,7 +291,9 @@ struct clientConnection_t {
     int downloadBlock;  // block we are waiting for
     int downloadCount;  // how many bytes we got
     int downloadSize;  // how many bytes we got
+#ifndef NEW_FILESYSTEM
     char downloadList[MAX_INFO_STRING];  // list of paks we need to download
+#endif
     bool downloadRestart;  // if true, we need to do another FS_Restart because we downloaded a pak
     char newsString[MAX_NEWS_STRING];
 
@@ -504,6 +509,8 @@ extern cvar_t *cl_inGameVideo;
 extern cvar_t *cl_lanForcePackets;
 extern cvar_t *cl_autoRecordDemo;
 
+extern cvar_t *cl_clantag;
+
 extern cvar_t *cl_consoleKeys;
 
 #ifdef USE_MUMBLE
@@ -591,7 +598,9 @@ const char *Key_KeynumToString(int keynum);
 //
 // cl_parse.c
 //
+#ifndef NEW_FILESYSTEM
 extern bool cl_connectedToPureServer;
+#endif
 extern bool cl_connectedToCheatServer;
 
 #ifdef USE_VOIP
