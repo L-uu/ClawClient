@@ -359,6 +359,104 @@ void QDECL Com_Error( int code, const char *fmt, ... )
     Sys_Error("%s", com_errorMessage);
 }
 
+typedef struct com_colour_defs_s
+{
+	char *name;
+	char *code;
+} com_colour_defs_t;
+
+static const com_colour_defs_t colour_definitions[] =
+{
+	{"Black", "0"},
+	{"Red", "1"},
+	{"Green", "2"},
+	{"Yellow", "3"},
+	{"Blue", "4"},
+	{"Cyan", "5"},
+	{"Magenta", "6"},
+	{"White", "7"},
+	{"Gray", "8"},
+	{"Orange", "9"},
+	{"Rose Bud", "a"},
+	{"Pale Green", "b"},
+	{"Pale Golden", "c"},
+	{"Columbia Blue", "d"},
+	{"Pale Turquoise", "e"},
+	{"Pale Violet Red", "f"},
+	{"Palace Pale White" , "g"},
+	{"Olive", "h"},
+	{"Tomato", "i"},
+	{"Lime", "j"},
+	{"Lemon", "k"},
+	{"Blue Berry", "l"},
+	{"Turquoise", "m"},
+	{"Wild Watermelon", "n"},
+	{"Saltpan", "o"},
+	{"Gray Chateau", "p"},
+	{"Rust", "q"},
+	{"Copper Green", "r"},
+	{"Gold", "s"},
+	{"Steel Blue", "t"},
+	{"Steel Gray", "u"},
+	{"Bronze", "v"},
+	{"Silver", "w"},
+	{"Dark Gray", "x"},
+	{"Dark Orange", "y"},
+	{"Dark Green", "z"},
+	{"Red Orange", "A"},
+	{"Forest Green", "B"},
+	{"Bright Sun", "C"},
+	{"Medium Slate Blue", "D"},
+	{"Celeste", "E"},
+	{"Ironstone", "F"},
+	{"Timberwolf", "G"},
+	{"Onyx", "H"},
+	{"Rosewood", "I"},
+	{"Kokoda", "J"},
+	{"Porsche", "K"},
+	{"Cloud Burst", "L"},
+	{"Blue Diane", "M"},
+	{"Rope", "N"},
+	{"Blonde", "O"},
+	{"Smokey Black", "P"},
+	{"American Rose", "Q"},
+	{"Neon Green", "R"},
+	{"Neon Yellow", "S"},
+	{"Ultramarine", "T"},
+	{"Turquoise Blue", "U"},
+	{"Dark Magenta", "V"},
+	{"Magic Mint", "W"},
+	{"Light Gray", "X"},
+	{"Light Salmon", "Y"},
+	{"Light Green", "Z"},
+};
+
+static int colour_definitions_length = ARRAY_LEN(colour_definitions);
+
+/*
+==============
+Com_Colours_f
+==============
+*/
+void Com_Colours_f(void) {
+	int row, i, j;
+
+	Com_Printf("^3 %-20s %-6s %-20s %-6s^7\n\n", "Colour", "Code", "Colour", "Code");
+
+	for(row = 0; row < ((int)ceilf(((float)colour_definitions_length) / 2.0f)); row++) {
+		for(i = (row * 2), j = 0; i < colour_definitions_length && j < 2; i++, j++) {
+			Com_Printf(
+				" ^%s%-20s ^%s^^%s%-5s",
+				colour_definitions[i].code,
+				colour_definitions[i].name,
+				colour_definitions[i].code,
+				colour_definitions[i].code,
+				colour_definitions[i].code);
+    }
+		Com_Printf("^7\n");
+	}
+}
+
 /*
 =============
 Com_Quit_f
@@ -2634,6 +2732,7 @@ void Com_Init( char *commandLine )
         Cmd_AddCommand ("freeze", Com_Freeze_f);
     }
     Cmd_AddCommand ("quit", Com_Quit_f);
+	Cmd_AddCommand ("colours", Com_Colours_f);
     Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
     Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
     Cmd_SetCommandCompletionFunc( "writeconfig", Cmd_CompleteCfgName );
