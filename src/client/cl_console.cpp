@@ -425,7 +425,7 @@ Con_Init
 void Con_Init (void) {
 	int		i;
 
-	con_conspeed    = Cvar_Get ("scr_conspeed", "3", 0);
+	con_conspeed    = Cvar_Get ("scr_conspeed", "3", CVAR_ARCHIVE);
 	con_useShader   = Cvar_Get ("scr_useShader", "1", CVAR_ARCHIVE);
 	con_height      = Cvar_Get ("scr_height", "50", CVAR_ARCHIVE);
 	con_colorRed    = Cvar_Get ("scr_colorRed", "0", CVAR_ARCHIVE);
